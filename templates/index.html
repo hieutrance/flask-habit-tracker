@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    main { max-width: 100% !important; padding-left: 2rem; padding-right: 2rem; }
+    /* Tùy chỉnh thanh cuộn ngang của bảng ma trận cho mượt và mảnh hơn */
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm border-l-4 border-l-indigo-500">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Streak 🔥</span>
+        <h2 class="text-3xl font-extrabold text-indigo-600 mt-1">{{ current_streak }} <span class="text-sm font-normal text-gray-400">ngày</span></h2>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Best Streak 🏆</span>
+        <h2 class="text-3xl font-extrabold text-gray-700 mt-1">{{ current_streak }} <span class="text-sm font-normal text-gray-400">ngày</span></h2>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">This Month 📊</span>
+        <h2 class="text-3xl font-extrabold text-indigo-600 mt-1">{{ this_month_percentage }}%</h2>
+    </div>
+    <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Check-ins ✅</span>
+        <h2 class="text-3xl font-extrabold text-indigo-600 mt-1">{{ total_checkins }}</h2>
+    </div>
+</div>
+
+<form action="/add-habit" method="POST" class="mb-6 flex max-w-md gap-2">
+    <input type="text" name="title" placeholder="Thêm thói quen mới..." required
+        class="flex-grow bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-400 shadow-sm">
+    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl px-4 py-2 transition shadow-sm">
+        + Thêm
+    </button>
+</form>
+
+<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-8">
+    <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <h3 class="font-bold text-gray-800 text-base"><i class="fa-regular fa-calendar mr-2 text-indigo-500"></i>Tháng theo dõi: {{ month_label }}</h3>
+        <span class="text-xs bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-full font-medium">Hôm nay: Ngày {{ current_day }}</span>
+    </div>
+    
+    <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full border-collapse text-left text-sm table-fixed">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-100 text-gray-400 font-semibold">
+                    <th class="p-4 w-[220px] sticky left-0 bg-gray-50 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">Thói quen</th>
+                    {% for day in days_in_month %}
+                        <th class="p-2 text-center w-[40px] {% if day == current_day %}bg-indigo-50/50 text-indigo-600 font-bold{% endif %}">
+                            {{ day }}
+                        </th>
+                    {% endfor %}
+                    <th class="p-4 text-center w-[80px]">Tháng</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                {% for habit in matrix_data %}
+                <tr class="hover:bg-gray-50/50 transition group">
+                    
+                    <td class="p-4 font-medium text-gray-700 sticky left-0 bg-white z-10 border-r border-gray-50 flex items-center justify-between shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                        <span class="truncate pr-2" title="{{ habit.title }}">{{ habit.title }}</span>
+                        <form action="/delete-habit/{{ habit.id }}" method="POST" class="m-0 opacity-0 group-hover:opacity-100 transition duration-150" onsubmit="return confirm('Bạn có chắc chắn muốn xóa thói quen này và toàn bộ lịch sử tích điểm của nó không?');">
+                            <button type="submit" class="text-gray-300 hover:text-red-500 p-1 transition" title="Xóa thói quen">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </form>
+                    </td>
+                    
+                    {% for day in days_in_month %}
+                        <td class="p-1 text-center {% if day == current_day %}bg-indigo-50/20{% endif %}">
+                            <form action="/toggle-matrix/{{ day }}/{{ habit.id }}" method="POST" class="m-0">
+                                {% if habit.days[day] %}
+                                    <button type="submit" class="w-6 h-6 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white mx-auto flex items-center justify-center transition shadow-xs transform active:scale-90">
+                                        <i class="fa-solid fa-check text-[10px]"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="w-6 h-6 rounded-full border border-gray-200 bg-white hover:border-indigo-300 text-transparent hover:text-indigo-400 mx-auto flex items-center justify-center transition transform active:scale-90">
+                                        <i class="fa-solid fa-check text-[10px]"></i>
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    {% endfor %}
+                    
+                    <td class="p-4 text-center font-bold text-gray-500 bg-gray-50/20">
+                        {{ habit.month_percentage }}%
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+        <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Năng suất hoàn thành 7 ngày gần nhất
+        </h3>
+        <div class="relative w-full h-64">
+            <canvas id="habitBarChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
+        <h3 class="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> Tổng số ngày hoàn thành của từng Task (Tháng này)
+        </h3>
+        <div class="relative w-full h-64">
+            <canvas id="taskHorizontalChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const barLabels = JSON.parse('{{ recent_days_labels | tojson }}');
+    const barData = JSON.parse('{{ recent_days_values | tojson }}');
+
+    const taskLabels = JSON.parse('{{ task_labels | tojson }}');
+    const taskCounts = JSON.parse('{{ task_counts | tojson }}');
+
+    const ctx1 = document.getElementById('habitBarChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: barLabels,
+            datasets: [{
+                label: 'Số lượng nhiệm vụ',
+                data: barData,
+                backgroundColor: '#4f46e5',
+                hoverBackgroundColor: '#4338ca',
+                borderRadius: 6,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1, color: '#9ca3af' }, grid: { color: '#f3f4f6' } },
+                x: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+            }
+        }
+    });
+
+    const ctx2 = document.getElementById('taskHorizontalChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: taskLabels, 
+            datasets: [{
+                label: 'Số ngày hoàn thành',
+                data: taskCounts, 
+                backgroundColor: '#fa9837', 
+                hoverBackgroundColor: '#bf670f',
+                borderRadius: 6,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            indexAxis: 'y', 
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1, color: '#9ca3af' }, grid: { color: '#f3f4f6' } },
+                y: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}
