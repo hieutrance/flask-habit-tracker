@@ -8,17 +8,18 @@ import json
 
 app = Flask(__name__)
 
-if os.path.exists('firebase_key.json'):
-    cred = credentials.Certificate('firebase_key.json')
-    firebase_admin.initialize_app(cred)
-else:
-    firebase_key_env = os.environ.get('FIREBASE_KEY')
-    if firebase_key_env:
-        firebase_info = json.loads(firebase_key_env)
-        cred = credentials.Certificate(firebase_info)
+if not firebase_admin._apps:
+    if os.path.exists('firebase_key.json'):
+        cred = credentials.Certificate('firebase_key.json')
         firebase_admin.initialize_app(cred)
     else:
-        raise ValueError("Không tìm thấy file key hoặc biến môi trường FIREBASE_KEY")
+        firebase_key_env = os.environ.get('FIREBASE_KEY')
+        if firebase_key_env:
+            firebase_info = json.loads(firebase_key_env)
+            cred = credentials.Certificate(firebase_info)
+            firebase_admin.initialize_app(cred)
+        else:
+            raise ValueError("Không tìm thấy file key hoặc biến môi trường FIREBASE_KEY")
 
 db = firestore.client()
 HABITS_COLLECTION = "daily_habits"
